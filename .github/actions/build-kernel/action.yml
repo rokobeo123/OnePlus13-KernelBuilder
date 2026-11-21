@@ -1101,6 +1101,54 @@ runs:
         chmod +x "$RUNNER_TEMP/apply_susfs_patches.sh"
         "$RUNNER_TEMP/apply_susfs_patches.sh"
 
+    - name: Add NoMount Kernel Driver
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "::group::Add NoMount Built-in Driver"
+        cd "$COMMON_KERNEL_FOLDER"
+
+        rm -rf fs/nomount "$RUNNER_TEMP/nomount_repo"
+        mkdir -p fs/nomount
+        git clone --depth=1 -b dev https://github.com/maxsteeel/nomount.git "$RUNNER_TEMP/nomount_repo"
+        cp -rf "$RUNNER_TEMP/nomount_repo/kernel/src/"* fs/nomount/
+
+        if ! grep -q -- "-Wno-error" fs/nomount/Makefile; then
+          echo 'ccflags-y += -Wno-error' >> fs/nomount/Makefile
+        fi
+
+        if ! grep -q "nomount" fs/Makefile; then
+          echo "obj-\$(CONFIG_NOMOUNT) += nomount/" >> fs/Makefile
+        fi
+
+        if ! grep -q 'source "fs/nomount/Kconfig"' fs/Kconfig; then
+          awk '
+            /^endmenu/ { last_match = NR }
+            { lines[NR] = $0 }
+            END {
+              for (i = 1; i <= NR; i++) {
+                if (i == last_match) print "source \"fs/nomount/Kconfig\""
+                print lines[i]
+              }
+            }
+          ' fs/Kconfig > fs/Kconfig.tmp && mv fs/Kconfig.tmp fs/Kconfig
+        fi
+
+        for DEFCONFIG in arch/arm64/configs/gki_defconfig; do
+          if [ -f "$DEFCONFIG" ]; then
+            sed -i '/CONFIG_NOMOUNT/d' "$DEFCONFIG"
+            echo "CONFIG_NOMOUNT=y" >> "$DEFCONFIG"
+          fi
+        done
+
+        if [ -n "${MSM_KERNEL_FOLDER:-}" ] && [ -d "$MSM_KERNEL_FOLDER" ] && [ -f "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" ]; then
+          sed -i '/CONFIG_NOMOUNT/d' "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+          echo "CONFIG_NOMOUNT=y" >> "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+        fi
+
+        echo "NoMount driver integrated into fs/nomount (CONFIG_NOMOUNT=y)"
+        echo "::endgroup::"
+
     - name: Add BBG
       if: ${{ env.OP_BBG == 'true' }}
       shell: bash
@@ -3462,6 +3510,7 @@ runs:
         if [ "$OP_SUSFS" = "true" ]; then
           assert_config "CONFIG_KSU_SUSFS=y"
         fi
+        assert_config "CONFIG_NOMOUNT=y"
         if [ "$OP_BORE" = "true" ]; then
           assert_config "CONFIG_SCHED_BORE=y"
         fi
