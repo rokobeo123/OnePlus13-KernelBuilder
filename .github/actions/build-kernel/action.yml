@@ -1232,6 +1232,41 @@ runs:
               fi
               cd "$KSU_FOLDER"
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+
+              # Xử lý toàn bộ các hàm lệch trong SukiSU-Nova
+              for DIR in "$KSU_FOLDER/kernel" "$COMMON_KERNEL_FOLDER/drivers/kernelsu"; do
+                [ -d "$DIR" ] || continue
+                if [ -f "$DIR/core/init.c" ]; then
+                  sed -i '/ksu_lsm_hook_init[[:space:]]*();/d' "$DIR/core/init.c" || true
+                  sed -i '/ksu_lsm_hook_exit[[:space:]]*();/d' "$DIR/core/init.c" || true
+                  sed -i '/ksu_app_profile_init[[:space:]]*();/d' "$DIR/core/init.c" || true
+                  sed -i -e 's/\bksu_syscall_hook_manager_init[[:space:]]*(/ksu_syscall_hook_init(/g' \
+                         -e 's/\bksu_syscall_hook_manager_exit[[:space:]]*(/ksu_syscall_hook_exit(/g' "$DIR/core/init.c" || true
+                  sed -i '/ksu_syscall_hook_init[[:space:]]*();/d' "$DIR/core/init.c" || true
+                  sed -i '/ksu_syscall_hook_exit[[:space:]]*();/d' "$DIR/core/init.c" || true
+                  sed -i -e '/^[[:space:]]*bool[[:space:]]\+ksu_late_loaded[[:space:]]*;/d' \
+                         -e '/^[[:space:]]*ksu_late_loaded[[:space:]]*=/d' "$DIR/core/init.c" || true
+                  sed -i -e 's/![[:space:]]*ksu_late_loaded/1/g' \
+                         -e 's/\bksu_late_loaded\b/0/g' "$DIR/core/init.c" || true
+                  if ! grep -q '#include <linux/susfs.h>' "$DIR/core/init.c"; then
+                    sed -i '1i#include <linux/susfs.h>' "$DIR/core/init.c"
+                  fi
+                  if ! grep -q 'susfs_init();' "$DIR/core/init.c"; then
+                    sed -i '/ksu_supercalls_init[[:space:]]*();/i #ifdef CONFIG_KSU_SUSFS\n    susfs_init();\n#endif' "$DIR/core/init.c" || true
+                  fi
+                fi
+                if [ -f "$DIR/include/ksu.h" ]; then
+                  sed -i '/extern[[:space:]]\+bool[[:space:]]\+ksu_late_loaded[[:space:]]*;/d' "$DIR/include/ksu.h" || true
+                fi
+                [ -f "$DIR/runtime/boot_event.c" ] && sed -i '/ksu_stop_input_hook_runtime[[:space:]]*();/d' "$DIR/runtime/boot_event.c" || true
+                [ -f "$DIR/feature/selinux_hide.c" ] && sed -i \
+                  -e '/^struct ksu_lsm_hook selinux_setprocattr_hook/d' \
+                  -e '/^static int my_setprocattr/d' \
+                  -e '/ksu_lsm_unhook/d' \
+                  -e 's/^static int __nocfi my_setprocattr/int __nocfi my_setprocattr/' "$DIR/feature/selinux_hide.c" || true
+                [ -f "$DIR/supercall/dispatch.c" ] && sed -i 's/return[[:space:]]\+ksu_set_spoof_version[[:space:]]*([^;]*);/return -EINVAL;/g' "$DIR/supercall/dispatch.c" || true
+              done
+
               if [ -f "kernel/Kconfig.rej" ]; then
                 if ! grep -q 'menu "KernelSU - SUSFS"' kernel/Kconfig; then
                   awk '/^\+menu "KernelSU - SUSFS"/ { f = 1 } f { if (/^-/) next; line = $0; sub(/^[+ ]/, "", line); print line; if ($0 ~ /^\+endmenu/) exit }' kernel/Kconfig.rej > kernel/.susfs_menu.kconfig
