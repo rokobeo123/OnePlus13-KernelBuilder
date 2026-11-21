@@ -1143,7 +1143,6 @@ runs:
 
         if [ -n "${MSM_KERNEL_FOLDER:-}" ] && [ -d "$MSM_KERNEL_FOLDER" ] && [ -f "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" ]; then
           sed -i '/CONFIG_NOMOUNT/d' "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
-          echo "CONFIG_NOMOUNT=y" >> "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
         fi
 
         echo "NoMount driver integrated into fs/nomount (CONFIG_NOMOUNT=y)"
