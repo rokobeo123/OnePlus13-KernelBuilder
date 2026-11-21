@@ -1228,6 +1228,10 @@ runs:
             fi
             cd "$KSU_FOLDER"
             patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+            if [ -f kernel/Kconfig.rej ]; then
+              awk '/^\+menu "KernelSU - SUSFS"/ { f = 1 } f { if (/^-/) next; line = $0; sub(/^[+ ]/, "", line); print line; if ($0 ~ /^\+endmenu/) exit }' kernel/Kconfig.rej >> kernel/Kconfig 2>/dev/null || true
+            fi
+            rm -f $(find . -name "*.rej") 2>/dev/null || true
             ;;
           *)
             echo "::error::Unsupported SUSFS version: $susfs_version"
