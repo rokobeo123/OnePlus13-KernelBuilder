@@ -4817,7 +4817,7 @@ runs:
       # the job is cancelled mid-build (the most common outcome for the
       # self-hosted DDK variant), because the split config build above has
       # usually completed by then and is the expensive part to redo.
-      if: always() && steps.build_ddk_step.conclusion != 'skipped'
+      if: always() && steps.build_ddk_step.conclusion == 'success'
       uses: ./.github/actions/cache/save
       with:
         cache_path: ${{ env.BAZEL_DISK_CACHE }}
