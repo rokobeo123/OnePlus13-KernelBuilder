@@ -1211,32 +1211,42 @@ runs:
               patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
             fi
             ;;
-          "v2.3.0")
-            # v2.3.0 synced with tiann/KernelSU main at 34a82ab7 (see the
-            # upstream "Bump version to 2.3.0" commit); verified to apply
-            # cleanly to KSU main HEAD 932014ab (one commit past the sync
-            # point). KSUN is NOT supported on this susfs version yet:
-            # upstream hunks still reject there and WildKernels' fix sets
-            # only go up to v2.2.0, so mixing a v2.3.0 base patch with the
-            # v2.2.0 fix set leaves the module half-patched (that is exactly
-            # what failed run 33287059782). Fail loudly instead. KSUN builds
-            # resolve the v2.2.0 ref via the variant-keyed pin in
-            # .github/compatible-commits.json.
-            if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
-              echo "::error::SUSFS v2.3.0 does not support KernelSU-Next yet (WildKernels fix patches stop at v2.2.0). Use ksu_variant=KSU, or pin susfs_branch to a v2.2.0 commit."
-              exit 1
-            fi
-            cd "$KSU_FOLDER"
-            patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
-            if [ -f kernel/Kconfig.rej ]; then
-              awk '/^\+menu "KernelSU - SUSFS"/ { f = 1 } f { if (/^-/) next; line = $0; sub(/^[+ ]/, "", line); print line; if ($0 ~ /^\+endmenu/) exit }' kernel/Kconfig.rej >> kernel/Kconfig 2>/dev/null || true
-            fi
-            rm -f $(find . -name "*.rej") 2>/dev/null || true
-            ;;
-          *)
-            echo "::error::Unsupported SUSFS version: $susfs_version"
-            exit 1
-            ;;
+            "v2.3.0"|"v2.4.0")
+              if [ "${{ inputs.ksu_type }}" = "KSUN" ]; then
+                echo "::error::SUSFS v2.3.0/v2.4.0 does not support KernelSU-Next yet. Use ksu_variant=KSU."
+                exit 1
+              fi
+              cd "$KSU_FOLDER/kernel"
+              if [ -f "include/arch.h" ] && ! grep -q 'PT_REGS_SYSCALL_PARM1' "include/arch.h"; then
+                sed -i 's|^#define PT_REGS_PARM1(x).*|&\n#ifndef __PT_SYSCALL_PARM1_REG\n#define __PT_SYSCALL_PARM1_REG __PT_PARM1_REG\n#endif\n#define PT_REGS_SYSCALL_PARM1(x) (__PT_REGS_CAST(x)->__PT_SYSCALL_PARM1_REG)|' "include/arch.h"
+              fi
+              [ -f "feature/adb_root.c" ] && sed -i 's|do_ksu_adb_root_handle_execve((const char __user \*)PT_REGS_PARM1(regs)|do_ksu_adb_root_handle_execve((const char __user *)PT_REGS_SYSCALL_PARM1(regs)|' "feature/adb_root.c" || true
+              [ -f "runtime/ksud_integration.c" ] && sed -i -e 's|(const char __user \*)PT_REGS_PARM1(regs)|(const char __user *)PT_REGS_SYSCALL_PARM1(regs)|' -e 's|unsigned int fd = PT_REGS_PARM1(regs);|unsigned int fd = PT_REGS_SYSCALL_PARM1(regs);|' "runtime/ksud_integration.c" || true
+              [ -f "supercall/supercall.c" ] && sed -i 's|int magic1 = (int)PT_REGS_PARM1(real_regs);|int magic1 = (int)PT_REGS_SYSCALL_PARM1(real_regs);|' "supercall/supercall.c" || true
+              if [ -f "feature/sucompat.c" ]; then
+                sed -i -e 's|(int)PT_REGS_PARM1(regs) != AT_FDCWD|(int)PT_REGS_SYSCALL_PARM1(regs) != AT_FDCWD|' \
+                       -e 's|orig_regs\[0\] = regs->__PT_PARM1_REG;|orig_regs[0] = PT_REGS_SYSCALL_PARM1(regs);|' \
+                       -e 's|regs->__PT_PARM1_REG = tmp_fd;|PT_REGS_SYSCALL_PARM1(regs) = tmp_fd;|' \
+                       -e 's|regs->__PT_PARM1_REG = orig_regs\[0\];|PT_REGS_SYSCALL_PARM1(regs) = orig_regs[0];|' \
+                       "feature/sucompat.c"
+              fi
+              cd "$KSU_FOLDER"
+              patch -p1 --forward < "$SUSFS_FOLDER/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch" || true
+              if [ -f "kernel/Kconfig.rej" ]; then
+                if ! grep -q 'menu "KernelSU - SUSFS"' kernel/Kconfig; then
+                  awk '/^\+menu "KernelSU - SUSFS"/ { f = 1 } f { if (/^-/) next; line = $0; sub(/^[+ ]/, "", line); print line; if ($0 ~ /^\+endmenu/) exit }' kernel/Kconfig.rej > kernel/.susfs_menu.kconfig
+                  awk 'FNR == NR { blk = blk $0 ORS; next } /^endmenu[[:space:]]*$/ && !done { printf "%s", blk; done = 1 } { print }' kernel/.susfs_menu.kconfig kernel/Kconfig > kernel/Kconfig.tmp
+                  mv kernel/Kconfig.tmp kernel/Kconfig
+                  rm -f kernel/.susfs_menu.kconfig
+                fi
+                rm -f kernel/Kconfig.rej
+              fi
+              if [ -f "kernel/Kbuild.rej" ]; then
+                sed -i '/ifeq (\$(CONFIG_KSU_X86_PATCH_SYSCALL_DISPATCHER),y)/,/^endif/d' kernel/Kbuild || true
+                rm -f kernel/Kbuild.rej
+              fi
+              rm -f kernel/core/init.c.rej kernel/runtime/ksud_integration.c.rej kernel/feature/selinux_hide.c.rej kernel/runtime/boot_event.c.rej kernel/supercall/dispatch.c.rej kernel/policy/app_profile.c.rej kernel/hook/syscall_event_bridge.c.rej kernel/feature/sucompat.c.rej kernel/feature/sucompat.h.rej kernel/supercall/supercall.c.rej kernel/supercall/supercall.h.rej kernel/policy/allowlist.c.rej kernel/feature/adb_root.c.rej kernel/selinux/rules.c.rej kernel/hook/setuid_hook.c.rej
+              ;;
         esac
 
         cd "$COMMON_KERNEL_FOLDER"
