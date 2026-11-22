@@ -985,6 +985,10 @@ runs:
         else
           git checkout main
         fi
+        if [ -f .gitmodules ]; then
+          sed -i 's|git.zako.shirkneko.top:20004/shirkneko|github.com/SukiSU-Nova|g' .gitmodules
+          git submodule sync
+        fi
         git submodule update --init --recursive
 
         cd "$DRIVER_DIR"
