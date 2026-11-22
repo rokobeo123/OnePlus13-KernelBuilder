@@ -19,6 +19,7 @@
   "hmbird": true,
   "ip_set": true,
   "kernel_version": "6.6",
+  "kmem_proxy": false,
   "lrng": false,
   "lto": "thin",
   "manifest": "oneplus_13_6.6.118_w.xml",

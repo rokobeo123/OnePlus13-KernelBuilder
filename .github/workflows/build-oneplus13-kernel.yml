@@ -73,7 +73,7 @@ on:
         description: 'Enable built-in kmem_proxy driver'
         required: true
         type: boolean
-        default: true
+        default: false
       optimize_level:
         description: Compiler optimization
         required: true
