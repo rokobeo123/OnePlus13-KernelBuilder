@@ -32,10 +32,6 @@ inputs:
     description: 'Enable dumping debug related artifacts'
     required: false
     default: false
-  kmem_proxy:
-    description: 'Enable built-in kmem_proxy driver'
-    required: false
-    default: 'false'
   github_token:
     description: 'GitHub Token'
     required: true
@@ -308,8 +304,6 @@ runs:
         else
           echo "✅ Input validation passed"
         fi
-        kmem_proxy_val="${OP_KMEM_PROXY:-${{ inputs.kmem_proxy }}}"
-        echo "OP_KMEM_PROXY=$kmem_proxy_val" >> "$GITHUB_ENV"
         echo "::endgroup::"
 
     - name: Setup Base Environment
@@ -1114,34 +1108,6 @@ runs:
 
         echo "NoMount driver integrated into fs/nomount (CONFIG_NOMOUNT=y)"
         echo "::endgroup::"
-
-    - name: Add Kmem Proxy Built-in Driver
-      if: ${{ env.OP_KMEM_PROXY == 'true' }}
-      shell: bash
-      run: |
-        set -euo pipefail
-        echo "::group::Add Kmem Proxy Built-in Driver"
-        cd "$COMMON_KERNEL_FOLDER"
-
-        mkdir -p drivers/misc/kmem_proxy
-        cp -rf "$GITHUB_WORKSPACE/drivers/kmem_proxy/"* drivers/misc/kmem_proxy/
-
-        if ! grep -q "kmem_proxy" drivers/misc/Makefile; then
-          echo 'obj-$(CONFIG_KMEM_PROXY) += kmem_proxy/' >> drivers/misc/Makefile
-        fi
-
-        if ! grep -q 'source "drivers/misc/kmem_proxy/Kconfig"' drivers/misc/Kconfig; then
-          sed -i '/endmenu/i source "drivers/misc/kmem_proxy/Kconfig"' drivers/misc/Kconfig
-        fi
-
-        echo "CONFIG_KMEM_PROXY=y" >> arch/arm64/configs/gki_defconfig
-        if [ -n "${MSM_KERNEL_FOLDER:-}" ] && [ -d "$MSM_KERNEL_FOLDER" ] && [ -f "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" ]; then
-          sed -i '/CONFIG_KMEM_PROXY/d' "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
-        fi
-
-        echo "Kmem Proxy built-in driver integrated (CONFIG_KMEM_PROXY=y)"
-        echo "::endgroup::"
-
 
     - name: Add BBG
       if: ${{ env.OP_BBG == 'true' }}
