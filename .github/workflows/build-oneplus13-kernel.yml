@@ -28,15 +28,14 @@ on:
           - all
         default: 6.6.118 A16
       ksu_variant:
-        description: KernelSU variant
+        description: Kernel variant
         required: true
         type: choice
         options:
-          - KSUN
-          - KSU
-        default: KSU
+          - SukiSU-Nova
+        default: SukiSU-Nova
       ksu_branch:
-        description: KernelSU branch, tag, or commit (empty uses main for KSU, dev for KSUN)
+        description: 'SukiSU-Nova branch, tag, or commit (empty uses main)'
         required: false
         type: string
         default: ''
@@ -431,11 +430,7 @@ jobs:
           KSU_BRANCH: ${{ inputs.ksu_branch }}
         run: |
           set -euo pipefail
-          if [ "$KSU_VARIANT" = KSUN ]; then
-            owner=KernelSU-Next; name=KernelSU-Next; default_ref=dev
-          else
-            owner=tiann; name=KernelSU; default_ref=main
-          fi
+          owner=SukiSU-Nova; name=SukiSU-Nova; default_ref=main
 
           # Prefer the last known-good commit for this variant so SUSFS and KernelSU
           # stay in sync. Falls back to the branch HEAD when no compatible commit is
