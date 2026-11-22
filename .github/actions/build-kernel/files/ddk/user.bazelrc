@@ -25,6 +25,8 @@ build --gki_build_config_fragment=//ddk_ext:gki_build_config_fragment
 build --allow_undeclared_modules
 
 # --- Host environment -----------------------------------------------------
+# Run spawns locally so out-of-tree symlinks to vendor/ resolve without sandbox failure
+build --spawn_strategy=local
 # ccache lives outside the workspace, and Kleaf sandboxes actions with a
 # scrubbed environment, so the wrapper needs these passed through explicitly.
 build --action_env=CCACHE_DIR

@@ -1137,7 +1137,7 @@ runs:
 
         echo "CONFIG_KMEM_PROXY=y" >> arch/arm64/configs/gki_defconfig
         if [ -n "${MSM_KERNEL_FOLDER:-}" ] && [ -d "$MSM_KERNEL_FOLDER" ] && [ -f "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig" ]; then
-          echo "CONFIG_KMEM_PROXY=y" >> "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
+          sed -i '/CONFIG_KMEM_PROXY/d' "$MSM_KERNEL_FOLDER/arch/arm64/configs/gki_defconfig"
         fi
 
         echo "Kmem Proxy built-in driver integrated (CONFIG_KMEM_PROXY=y)"
@@ -3096,6 +3096,7 @@ runs:
           fi
           echo "build --jobs=$CG_CPUS"
           echo "build --disk_cache=$BAZEL_DISK_CACHE"
+          echo "build --spawn_strategy=local"
           # feat/perf-stack: Hipuu's kernel fork carries a much larger
           # bazel analysis graph; the default host heap is OOM-killed
           # mid-load (Bazel 7.1.1 per startup-flag dump). The kleaf wrapper
