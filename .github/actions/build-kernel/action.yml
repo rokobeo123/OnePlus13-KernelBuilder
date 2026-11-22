@@ -3012,6 +3012,7 @@ runs:
           rm -rf "$KERNEL_PLATFORM_FOLDER/vendor"
           cp -r "$CONFIG_FOLDER/vendor" "$KERNEL_PLATFORM_FOLDER/vendor"
           echo "Copied $CONFIG_FOLDER/vendor -> kernel_platform/vendor"
+          python3 "$GITHUB_ACTION_PATH/files/ddk/fix_vendor_symlinks.py" "$KERNEL_PLATFORM_FOLDER"
         fi
         for d in wlan/qcacld-3.0 wlan/platform dataipa; do
           if [ ! -d "$KERNEL_PLATFORM_FOLDER/vendor/qcom/opensource/$d" ]; then
@@ -3096,7 +3097,6 @@ runs:
           fi
           echo "build --jobs=$CG_CPUS"
           echo "build --disk_cache=$BAZEL_DISK_CACHE"
-          echo "build --spawn_strategy=local"
           # feat/perf-stack: Hipuu's kernel fork carries a much larger
           # bazel analysis graph; the default host heap is OOM-killed
           # mid-load (Bazel 7.1.1 per startup-flag dump). The kleaf wrapper
