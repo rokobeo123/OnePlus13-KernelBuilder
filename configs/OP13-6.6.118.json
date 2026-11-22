@@ -1,7 +1,7 @@
 {
   "android_version": "android15",
-  "audit_off": false,
-  "battery_save": false,
+  "audit_off": true,
+  "battery_save": true,
   "bbg": true,
   "bbr": true,
   "bbr3": true,
