@@ -70,6 +70,11 @@ on:
         required: false
         type: boolean
         default: true
+      kmem_proxy:
+        description: 'Enable built-in kmem_proxy driver'
+        required: true
+        type: boolean
+        default: true
       optimize_level:
         description: Compiler optimization
         required: true
@@ -371,6 +376,7 @@ jobs:
           WIRELESS_MODULES: ${{ inputs.wireless_modules }}
           DDK: ${{ inputs.ddk }}
           DDK_INJECTION: ${{ inputs.ddk_injection }}
+          KMEM_PROXY: ${{ inputs.kmem_proxy }}
         run: |
           set -euo pipefail
           if [ "$COMPILER_MODE" = manifest ]; then
@@ -407,10 +413,11 @@ jobs:
             --argjson wireless_modules "$WIRELESS_MODULES" \
             --argjson ddk "$ddk" \
             --argjson ddk_injection "$ddk_injection" \
+            --argjson kmem_proxy "$KMEM_PROXY" \
             --arg lto "$LTO_MODE" \
             --arg zyc "$zyc_compiler" \
             --arg uname "$KERNEL_UNAME" \
-            '.susfs = $susfs | .opt = $opt | .battery_save = $battery_save | .audit_off = $audit_off | .bore = $bore | .lrng = $lrng | .nethunter = $nethunter | .wireless_modules = $wireless_modules | .ddk = $ddk | .ddk_injection = $ddk_injection | .lto = $lto | .zyc_compiler = $zyc | .uname = $uname' \
+            '.susfs = $susfs | .opt = $opt | .battery_save = $battery_save | .audit_off = $audit_off | .bore = $bore | .lrng = $lrng | .nethunter = $nethunter | .wireless_modules = $wireless_modules | .ddk = $ddk | .ddk_injection = $ddk_injection | .kmem_proxy = $kmem_proxy | .lto = $lto | .zyc_compiler = $zyc | .uname = $uname' \
             "${{ matrix.config }}")
           echo "config_json=$config_json" >> "$GITHUB_OUTPUT"
           jq . <<< "$config_json"
@@ -549,6 +556,7 @@ jobs:
           susfs_commit_hash_or_branch: ${{ steps.susfs.outputs.ref }}
           build_timestamp: ${{ inputs.build_timestamp }}
           optimize_level: ${{ inputs.optimize_level }}
+          kmem_proxy: ${{ inputs.kmem_proxy }}
           clean: ${{ inputs.clean_build }}
           debug: ${{ inputs.debug }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
