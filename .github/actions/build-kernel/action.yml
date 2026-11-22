@@ -3005,13 +3005,13 @@ runs:
         install -m 0644 "$GITHUB_ACTION_PATH/files/ddk/gki_build_config.fragment" "$KERNEL_PLATFORM_FOLDER/ddk_ext/gki_build_config.fragment"
         install -m 0644 "$GITHUB_ACTION_PATH/files/ddk/user.bazelrc" "$KERNEL_PLATFORM_FOLDER/user.bazelrc"
 
-        # The WLAN sources live one level up, in the modules repo that syncs to
-        # the config dir. Copy rather than symlinking so Bazel linux-sandbox can
+        # The WLAN sources live in $CONFIG_FOLDER/vendor.
+        # Copy rather than symlinking so Bazel linux-sandbox can
         # access all files without breaking outside the sandbox workspace root.
-        if [ -d "../vendor" ]; then
+        if [ -d "$CONFIG_FOLDER/vendor" ]; then
           rm -rf "$KERNEL_PLATFORM_FOLDER/vendor"
-          cp -r "../vendor" "$KERNEL_PLATFORM_FOLDER/vendor"
-          echo "Copied ../vendor -> kernel_platform/vendor"
+          cp -r "$CONFIG_FOLDER/vendor" "$KERNEL_PLATFORM_FOLDER/vendor"
+          echo "Copied $CONFIG_FOLDER/vendor -> kernel_platform/vendor"
         fi
         for d in wlan/qcacld-3.0 wlan/platform dataipa; do
           if [ ! -d "$KERNEL_PLATFORM_FOLDER/vendor/qcom/opensource/$d" ]; then
