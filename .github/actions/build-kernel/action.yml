@@ -1051,7 +1051,6 @@ runs:
         export ANDROID_VER_LOCAL="${ANDROID_VER}"
         export KERNEL_VER_LOCAL="${KERNEL_VER}"
         export OP_SPOOF_UNAME="true"
-        sed -i '/mount_hide.h/d' "$KERNEL_PLATFORM_FOLDER/KernelSU/kernel/hook/setuid_hook.c" || true
         curl -sSL "https://raw.githubusercontent.com/Bouteillepleine/OnePlus-SukiSu_NMS/NoMount/configs/apply_susfs_patches.sh" -o "$RUNNER_TEMP/apply_susfs_patches.sh"
         chmod +x "$RUNNER_TEMP/apply_susfs_patches.sh"
         sed -i 's/CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=n/CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y/' "$RUNNER_TEMP/apply_susfs_patches.sh"
