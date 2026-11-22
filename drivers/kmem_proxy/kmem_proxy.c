@@ -118,7 +118,6 @@ static long kmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
         char mod_name[128] = {0};
         struct mm_struct *mm;
         struct vm_area_struct *vma;
-        VMA_ITERATOR(vmi, NULL, 0);
 
         if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
             return -EFAULT;
@@ -139,7 +138,7 @@ static long kmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
             return -ESRCH;
 
         mmap_read_lock(mm);
-        vmi.mm = mm;
+        VMA_ITERATOR(vmi, mm, 0);
         for_each_vma(vmi, vma) {
             if (vma->vm_file) {
                 char buf[128];
