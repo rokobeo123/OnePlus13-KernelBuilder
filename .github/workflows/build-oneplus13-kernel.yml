@@ -103,12 +103,12 @@ on:
         description: 'Battery-first opt-ins: WQ power-efficient workqueues, RCU normal-after-boot, cpuss sleep-stats blacklist (small latency/observability tradeoffs, see README)'
         required: true
         type: boolean
-        default: true
+        default: false
       audit_off:
         description: 'Disable kernel audit logging via cmdline audit=0 (dmesg hygiene; on this permissive-SELinux device audit churn is otherwise constant)'
         required: true
         type: boolean
-        default: true
+        default: false
       bore:
         description: 'Apply the BORE scheduler (Burst-Oriented Response Enhancer: scores tasks by burst time so interactive work wins under load). Scheduler change, off by default. Only 6.6.118/6.6.142 (and not every A16 tree: 6.6.89 A16 is unsupported); any other variant fails the build'
         required: true
