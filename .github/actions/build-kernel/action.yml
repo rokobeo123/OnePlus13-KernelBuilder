@@ -967,13 +967,34 @@ runs:
         cd "$KERNEL_PLATFORM_FOLDER"
         echo "Adding SukiSU-Nova..."
         KSU_INPUT="${{ inputs.ksu_branch_or_hash }}"
-        if [ -z "$KSU_INPUT" ]; then
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/SukiSU-Nova/SukiSU-Nova/main/kernel/setup.sh" | bash -
+
+        if [ -d "common/drivers" ]; then
+          DRIVER_DIR="$(pwd)/common/drivers"
+        elif [ -d "drivers" ]; then
+          DRIVER_DIR="$(pwd)/drivers"
         else
-          curl --fail --location --proto '=https' -LSs "https://raw.githubusercontent.com/SukiSU-Nova/SukiSU-Nova/main/kernel/setup.sh" | bash -s "$KSU_INPUT"
+          echo '[ERROR] "drivers/" directory not found.'
+          exit 127
+        fi
+
+        rm -rf KernelSU
+        git clone https://github.com/SukiSU-Nova/SukiSU-Nova.git KernelSU
+        cd KernelSU
+        if [ -n "$KSU_INPUT" ]; then
+          git checkout "$KSU_INPUT" || git checkout main
+        else
+          git checkout main
         fi
         git submodule update --init --recursive
-        cd KernelSU/kernel
+
+        cd "$DRIVER_DIR"
+        [ -L "kernelsu" ] && rm "kernelsu"
+        ln -sf "$(realpath --relative-to="$DRIVER_DIR" "$KERNEL_PLATFORM_FOLDER/KernelSU/kernel")" "kernelsu"
+        grep -q "kernelsu" Makefile || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> Makefile
+        grep -q "source \"drivers/kernelsu/Kconfig\"" Kconfig || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" Kconfig
+        echo "[+] SukiSU-Nova setup done"
+
+        cd "$KERNEL_PLATFORM_FOLDER/KernelSU/kernel"
         BASE_VERSION=30000
         COMMITS_COUNT=$(/usr/bin/git rev-list --count HEAD)
         KSU_VERSION=$(expr $COMMITS_COUNT "+" $BASE_VERSION)
