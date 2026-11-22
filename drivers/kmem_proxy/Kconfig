@@ -1,0 +1,5 @@
+config KMEM_PROXY
+	bool "Kernel Memory Proxy Driver"
+	default y
+	help
+	  Private supervisor memory proxy device.
